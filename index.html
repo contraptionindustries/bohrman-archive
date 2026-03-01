@@ -399,6 +399,98 @@
             cursor: pointer;
         }
 
+        .density-sliders {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .slider-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: #888;
+        }
+
+        .density-slider {
+            width: 60px;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(100, 100, 150, 0.3);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .density-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4da6ff;
+            cursor: pointer;
+        }
+
+        .slider-label span {
+            width: 30px;
+            text-align: right;
+            font-size: 9px;
+            color: #666;
+        }
+
+        .legend-section {
+            margin-bottom: 18px;
+        }
+
+        .legend-title {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .legend-dot-square {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .legend-text {
+            font-size: 12px;
+            color: #bbb;
+        }
+
+        .legend-hint {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.5;
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 4px;
+            border-left: 2px solid rgba(77,166,255,0.3);
+        }
+
         .open-link-btn:hover {
             background: rgba(77, 166, 255, 0.35);
             color: #80c0ff;
@@ -416,8 +508,13 @@
         <div class="bottom-filters">
             <button class="filter-btn active" data-type="emails">Emails</button>
             <button class="filter-btn active" data-type="people">People</button>
-            <button class="filter-btn active" data-type="web">Web Sources</button>
-            <button class="filter-btn active" data-type="assets">Assets</button>
+            <button class="filter-btn active" data-type="web">Press</button>
+            <button class="filter-btn active" data-type="assets">Media</button>
+        </div>
+        <div class="density-sliders">
+            <label class="slider-label">Emails <input type="range" min="0" max="100" value="100" id="density-emails" class="density-slider" title="Spread email nodes apart"><span id="density-emails-val">100%</span></label>
+            <label class="slider-label">Press <input type="range" min="0" max="100" value="100" id="density-press" class="density-slider" title="Spread press nodes apart"><span id="density-press-val">100%</span></label>
+            <label class="slider-label">Media <input type="range" min="0" max="100" value="100" id="density-media" class="density-slider" title="Spread media nodes apart"><span id="density-media-val">100%</span></label>
         </div>
         <div class="bottom-stats">
             <span>Zoom: <span id="stat-zoom">1.00</span>x</span>
@@ -977,17 +1074,29 @@
             nodeElements.on('click', function(event, d) {
                 event.stopPropagation();
                 if (traceMode && d.type === 'person') {
+                    // Click person: activate (or switch) trace
                     activateTrace(d);
-                } else if (traceMode && d.type === 'email') {
-                    // In trace mode, clicking an email still shows details
+                } else if (tracedNode && d.type === 'email') {
+                    // During active trace, clicking email shows details but keeps trace
                     selectNode(d);
                 } else {
                     selectNode(d);
                 }
             });
 
-            // Add hover handlers — highlight connected edges
+            // Add hover handlers — highlight connected edges (unless trace is active)
             nodeElements.on('mouseenter', function(event, d) {
+                if (tracedNode) {
+                    // Trace is locked in — only show tooltip for traced email nodes
+                    if (d.type === 'email') {
+                        d3.select(this).style('filter', 'brightness(1.8)');
+                        showTooltip(event, d);
+                    } else if (d.type === 'person' && d.id !== tracedNode.id) {
+                        d3.select(this).style('filter', 'brightness(1.4)');
+                        showTooltip(event, d);
+                    }
+                    return;
+                }
                 d3.select(this).style('filter', 'brightness(1.5)');
                 // Highlight connected edges
                 window.linkElements
@@ -1004,6 +1113,12 @@
             });
 
             nodeElements.on('mouseleave', function(event, d) {
+                if (tracedNode) {
+                    // Restore trace state — don't reset everything
+                    d3.select(this).style('filter', 'brightness(1)');
+                    hideTooltip();
+                    return;
+                }
                 d3.select(this).style('filter', 'brightness(1)');
                 window.linkElements
                     .attr('stroke', 'rgba(255, 200, 100, 0.06)')
@@ -1013,6 +1128,7 @@
             });
 
             nodeElements.on('mousemove', function(event, d) {
+                if (tracedNode && d.type !== 'email' && !(d.type === 'person' && d.id !== tracedNode.id)) return;
                 showTooltip(event, d);
             });
 
@@ -1352,6 +1468,48 @@
             window.nodeElements.style('opacity', 0.85);
         }
 
+        function showLegend() {
+            const panel = document.querySelector('.right-panel');
+            const panelTitle = document.getElementById('panel-title');
+            const panelContent = document.getElementById('panel-content');
+            panelTitle.textContent = 'Archive Key';
+            panelContent.innerHTML = `
+                <div class="legend-section">
+                    <div class="legend-title">People</div>
+                    <div class="legend-row"><div class="legend-dot" style="background:#f0d080;"></div><div class="legend-text">Person — click to trace connections</div></div>
+                </div>
+                <div class="legend-section">
+                    <div class="legend-title">Emails</div>
+                    <div class="legend-row"><div class="legend-dot" style="background:#4da6ff;"></div><div class="legend-text">Clear — sensitivity score 0–2</div></div>
+                    <div class="legend-row"><div class="legend-dot" style="background:#ffc800;"></div><div class="legend-text">Flagged — sensitivity score 3</div></div>
+                    <div class="legend-row"><div class="legend-dot" style="background:#ff6464;"></div><div class="legend-text">Review required — score 4+</div></div>
+                </div>
+                <div class="legend-section">
+                    <div class="legend-title">Press &amp; Web Sources</div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#00d4ff;"></div><div class="legend-text">Tech press</div></div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#ff00ff;"></div><div class="legend-text">Cultural</div></div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#00d400;"></div><div class="legend-text">Ratings</div></div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#ff8800;"></div><div class="legend-text">Trade press</div></div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#ff0000;"></div><div class="legend-text">CNN self-coverage</div></div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#0066ff;"></div><div class="legend-text">Politics</div></div>
+                </div>
+                <div class="legend-section">
+                    <div class="legend-title">Media Assets</div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#00d4aa;"></div><div class="legend-text">Image — ◻ on timeline</div></div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#ff0000;"></div><div class="legend-text">Video — ▶ on timeline</div></div>
+                    <div class="legend-row"><div class="legend-dot-square" style="background:#ffc800;"></div><div class="legend-text">Document — ▫ on timeline</div></div>
+                </div>
+                <div class="legend-hint">
+                    <strong>Hover</strong> a person to see their email network.<br>
+                    <strong>Click</strong> a person to trace two-hop connections.<br>
+                    <strong>Click</strong> any node to view details.<br>
+                    <strong>Click background</strong> to clear and return here.<br>
+                    Use <strong>sliders</strong> below to spread nodes apart for readability.
+                </div>
+            `;
+            panel.classList.add('visible');
+        }
+
         function setupInteractions() {
             // Filter buttons
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -1369,17 +1527,48 @@
 
             // Panel close button
             document.querySelector('.panel-close').addEventListener('click', () => {
-                document.querySelector('.right-panel').classList.remove('visible');
                 selectedNode = null;
                 if (traceMode) clearTrace();
+                showLegend();
             });
 
             // Canvas click to close panel / clear trace
             canvas.addEventListener('click', () => {
-                document.querySelector('.right-panel').classList.remove('visible');
                 selectedNode = null;
                 if (traceMode && tracedNode) clearTrace();
+                showLegend();
             });
+
+            // Density sliders — adjust collision radius to spread nodes apart
+            // Track extra padding per type: 100% = tight (0 extra), 0% = max spread (40 extra px)
+            const densityPadding = { email: 0, web: 0, asset: 0 };
+
+            ['emails', 'press', 'media'].forEach(sliderType => {
+                const slider = document.getElementById('density-' + sliderType);
+                const valSpan = document.getElementById('density-' + sliderType + '-val');
+                if (!slider) return;
+                slider.addEventListener('input', function() {
+                    const pct = parseInt(this.value);
+                    valSpan.textContent = pct + '%';
+
+                    // Map slider type to node type
+                    const nodeType = sliderType === 'emails' ? 'email' : sliderType === 'press' ? 'web' : 'asset';
+
+                    // 100% = 0 extra padding (tight), 0% = 40px extra (max spread)
+                    densityPadding[nodeType] = (100 - pct) * 0.4;
+
+                    // Reconfigure collision force with new per-type padding
+                    simulation.force('collide', d3.forceCollide(d => {
+                        return d.radius + CONFIG.simulation.forceCollide + (densityPadding[d.type] || 0);
+                    }));
+
+                    // Reheat simulation so nodes drift apart
+                    simulation.alpha(0.3).restart();
+                });
+            });
+
+            // Show legend on init
+            showLegend();
         }
 
         function updateStats() {
