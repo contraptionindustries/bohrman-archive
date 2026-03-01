@@ -278,6 +278,72 @@
             opacity: 1;
         }
 
+        /* Context menu */
+        .context-menu {
+            position: fixed;
+            background: rgba(15, 20, 50, 0.97);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            padding: 6px 0;
+            z-index: 200;
+            min-width: 200px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            display: none;
+        }
+
+        .context-menu.visible {
+            display: block;
+        }
+
+        .context-menu-header {
+            padding: 8px 14px;
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 4px;
+        }
+
+        .context-menu-item {
+            padding: 9px 14px;
+            font-size: 13px;
+            color: #ccc;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+
+        .context-menu-item:hover {
+            background: rgba(77, 166, 255, 0.15);
+            color: #fff;
+        }
+
+        .context-menu-item.disabled {
+            color: #555;
+            cursor: default;
+        }
+
+        .context-menu-item.disabled:hover {
+            background: none;
+            color: #555;
+        }
+
+        .context-menu-icon {
+            font-size: 14px;
+            width: 18px;
+            text-align: center;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.06);
+            margin: 4px 0;
+        }
+
         /* Scrollbar styling */
         .right-panel::-webkit-scrollbar {
             width: 6px;
@@ -519,6 +585,7 @@
         <div class="bottom-stats">
             <span>Zoom: <span id="stat-zoom">1.00</span>x</span>
             <span>Nodes: <span id="stat-nodes">0</span></span>
+            <span>&#128722; Collection: <span id="stat-collection">0</span></span>
         </div>
     </div>
 
@@ -531,6 +598,7 @@
     </div>
 
     <div class="tooltip"></div>
+    <div class="context-menu" id="context-menu"></div>
 
     <script>
         // Embed the data directly
@@ -1073,15 +1141,21 @@
             // Add click handlers
             nodeElements.on('click', function(event, d) {
                 event.stopPropagation();
+                hideContextMenu();
                 if (traceMode && d.type === 'person') {
-                    // Click person: activate (or switch) trace
                     activateTrace(d);
                 } else if (tracedNode && d.type === 'email') {
-                    // During active trace, clicking email shows details but keeps trace
                     selectNode(d);
                 } else {
                     selectNode(d);
                 }
+            });
+
+            // Right-click context menu
+            nodeElements.on('contextmenu', function(event, d) {
+                event.preventDefault();
+                event.stopPropagation();
+                showContextMenu(event, d);
             });
 
             // Add hover handlers — highlight connected edges (unless trace is active)
@@ -1468,6 +1542,114 @@
             window.nodeElements.style('opacity', 0.85);
         }
 
+        // --- Context Menu ---
+        let collection = new Set(); // future shopping cart / project collection
+
+        function showContextMenu(event, d) {
+            const menu = document.getElementById('context-menu');
+            const inCollection = collection.has(d.id);
+
+            let header = '';
+            let items = '';
+
+            if (d.type === 'email') {
+                header = 'Email';
+                items = `
+                    <div class="context-menu-item" data-action="view"><span class="context-menu-icon">&#128196;</span> View Details</div>
+                    <div class="context-menu-item" data-action="trace-people"><span class="context-menu-icon">&#128101;</span> Trace All Recipients</div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" data-action="collect"><span class="context-menu-icon">${inCollection ? '&#10003;' : '&#128722;'}</span> ${inCollection ? 'In Collection' : 'Add to Collection'}</div>
+                `;
+            } else if (d.type === 'person') {
+                header = d.name;
+                items = `
+                    <div class="context-menu-item" data-action="trace"><span class="context-menu-icon">&#128270;</span> Trace Connections</div>
+                    <div class="context-menu-item" data-action="view"><span class="context-menu-icon">&#128100;</span> View Profile</div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" data-action="collect"><span class="context-menu-icon">${inCollection ? '&#10003;' : '&#128722;'}</span> ${inCollection ? 'In Collection' : 'Add to Collection'}</div>
+                `;
+            } else if (d.type === 'web') {
+                header = 'Press';
+                items = `
+                    <div class="context-menu-item" data-action="view"><span class="context-menu-icon">&#128240;</span> View Details</div>
+                    <div class="context-menu-item" data-action="open-link"><span class="context-menu-icon">&#128279;</span> Open Article</div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" data-action="collect"><span class="context-menu-icon">${inCollection ? '&#10003;' : '&#128722;'}</span> ${inCollection ? 'In Collection' : 'Add to Collection'}</div>
+                `;
+            } else if (d.type === 'asset') {
+                header = 'Media';
+                items = `
+                    <div class="context-menu-item" data-action="view"><span class="context-menu-icon">&#127910;</span> View / Play</div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" data-action="collect"><span class="context-menu-icon">${inCollection ? '&#10003;' : '&#128722;'}</span> ${inCollection ? 'In Collection' : 'Add to Collection'}</div>
+                `;
+            }
+
+            menu.innerHTML = `
+                <div class="context-menu-header">${header}</div>
+                ${items}
+            `;
+
+            // Position: keep within viewport
+            const x = Math.min(event.clientX, window.innerWidth - 220);
+            const y = Math.min(event.clientY, window.innerHeight - 250);
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            menu.classList.add('visible');
+
+            // Wire up menu item clicks
+            menu.querySelectorAll('.context-menu-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const action = this.dataset.action;
+                    hideContextMenu();
+                    handleContextAction(action, d);
+                });
+            });
+        }
+
+        function hideContextMenu() {
+            document.getElementById('context-menu').classList.remove('visible');
+        }
+
+        function handleContextAction(action, d) {
+            switch (action) {
+                case 'view':
+                    selectNode(d);
+                    break;
+                case 'trace':
+                    if (d.type === 'person') activateTrace(d);
+                    break;
+                case 'trace-people':
+                    // Find people on this email and trace the first one (shows the network)
+                    const peopleOnEmail = [];
+                    links.forEach(l => {
+                        const srcId = typeof l.source === 'string' ? l.source : l.source.id;
+                        const tgtId = typeof l.target === 'string' ? l.target : l.target.id;
+                        if (srcId === d.id && tgtId.startsWith('p_')) peopleOnEmail.push(tgtId);
+                        if (tgtId === d.id && srcId.startsWith('p_')) peopleOnEmail.push(srcId);
+                    });
+                    if (peopleOnEmail.length > 0) {
+                        const personNode = nodesById.get(peopleOnEmail[0]);
+                        if (personNode) activateTrace(personNode);
+                    }
+                    break;
+                case 'open-link':
+                    if (d.url) window.open(d.url, '_blank');
+                    break;
+                case 'collect':
+                    if (collection.has(d.id)) {
+                        collection.delete(d.id);
+                    } else {
+                        collection.add(d.id);
+                    }
+                    // Brief visual feedback
+                    const badge = collection.size;
+                    const cartStat = document.getElementById('stat-collection');
+                    if (cartStat) cartStat.textContent = badge;
+                    break;
+            }
+        }
+
         function showLegend() {
             const panel = document.querySelector('.right-panel');
             const panelTitle = document.getElementById('panel-title');
@@ -1532,12 +1714,18 @@
                 showLegend();
             });
 
-            // Canvas click to close panel / clear trace
+            // Canvas click to close panel / clear trace / hide context menu
             canvas.addEventListener('click', () => {
+                hideContextMenu();
                 selectedNode = null;
                 if (traceMode && tracedNode) clearTrace();
                 showLegend();
             });
+
+            // Dismiss context menu on any click outside it
+            document.addEventListener('click', () => { hideContextMenu(); });
+            // Prevent default right-click on canvas background
+            canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); hideContextMenu(); });
 
             // Density sliders — adjust collision radius to spread nodes apart
             // Track extra padding per type: 100% = tight (0 extra), 0% = max spread (40 extra px)
