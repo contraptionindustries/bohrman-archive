@@ -1,0 +1,137 @@
+[
+  {
+    "type": "image",
+    "id": "cameras",
+    "file": "images/cameras.jpg",
+    "thumbnail": "thumbnails/cameras_thumb.jpg",
+    "dimensions": "1920x1440",
+    "size": 258429
+  }
+,
+  {
+    "type": "image",
+    "id": "db-office-wall-election-2008",
+    "file": "images/db-office-wall-election-2008.jpg",
+    "thumbnail": "thumbnails/db-office-wall-election-2008_thumb.jpg",
+    "dimensions": "800x600",
+    "size": 65366
+  }
+,
+  {
+    "type": "image",
+    "id": "flowdiagram",
+    "file": "images/flowdiagram.jpg",
+    "thumbnail": "thumbnails/flowdiagram_thumb.jpg",
+    "dimensions": "1024x576",
+    "size": 61834
+  }
+,
+  {
+    "type": "image",
+    "id": "halogramtent",
+    "file": "images/halogramtent.jpg",
+    "thumbnail": "thumbnails/halogramtent_thumb.jpg",
+    "dimensions": "1438x1920",
+    "size": 326709
+  }
+,
+  {
+    "type": "image",
+    "id": "rig",
+    "file": "images/rig.jpg",
+    "thumbnail": "thumbnails/rig_thumb.jpg",
+    "dimensions": "1920x1440",
+    "size": 396110
+  }
+,
+  {
+    "type": "image",
+    "id": "virtual-capitol",
+    "file": "images/virtual-capitol.jpg",
+    "thumbnail": "thumbnails/virtual-capitol_thumb.jpg",
+    "dimensions": "1920x1187",
+    "size": 376225
+  }
+,
+  {
+    "type": "video",
+    "id": "2008-debate-focus-scoring",
+    "file": "video/2008-debate-focus-scoring.mp4",
+    "poster": "video/2008-debate-focus-scoring_poster.jpg",
+    "duration": 145.746000,
+    "size": 15471453
+  }
+,
+  {
+    "type": "video",
+    "id": "david-bohrman-ko-obit",
+    "file": "video/david-bohrman-ko-obit.mp4",
+    "poster": "video/david-bohrman-ko-obit_poster.jpg",
+    "duration": 1119.168000,
+    "size": 18558083
+  }
+,
+  {
+    "type": "video",
+    "id": "hd-holigram-will-i-am-",
+    "file": "video/hd-holigram-will-i-am-.mp4",
+    "poster": "video/hd-holigram-will-i-am-_poster.jpg",
+    "duration": 39.340000,
+    "size": 5424638
+  }
+,
+  {
+    "type": "video",
+    "id": "hd-holigram-yellin",
+    "file": "video/hd-holigram-yellin.mp4",
+    "poster": "video/hd-holigram-yellin_poster.jpg",
+    "duration": 77.578000,
+    "size": 10323806
+  }
+,
+  {
+    "type": "video",
+    "id": "hd-magic-wall-",
+    "file": "video/hd-magic-wall-.mp4",
+    "poster": "video/hd-magic-wall-_poster.jpg",
+    "duration": 70.638000,
+    "size": 11410034
+  }
+,
+  {
+    "type": "video",
+    "id": "hd-youtube-debate",
+    "file": "video/hd-youtube-debate.mp4",
+    "poster": "video/hd-youtube-debate_poster.jpg",
+    "duration": 146.447000,
+    "size": 25321040
+  }
+,
+  {
+    "type": "video",
+    "id": "hologramerhill",
+    "file": "video/hologramerhill.mp4",
+    "poster": "video/hologramerhill_poster.jpg",
+    "duration": 81.500000,
+    "size": 17769940
+  }
+,
+  {
+    "type": "video",
+    "id": "inauguration-2009-vid-gizmo",
+    "file": "video/inauguration-2009-vid-gizmo.mp4",
+    "poster": "video/inauguration-2009-vid-gizmo_poster.jpg",
+    "duration": 126.193000,
+    "size": 53612627
+  }
+,
+  {
+    "type": "video",
+    "id": "youtube_-_cnn_hologram_tv_firs",
+    "file": "video/youtube_-_cnn_hologram_tv_firs.mp4",
+    "poster": "video/youtube_-_cnn_hologram_tv_firs_poster.jpg",
+    "duration": 88.004000,
+    "size": 5122828
+  }
+
+]
