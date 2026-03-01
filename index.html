@@ -408,6 +408,32 @@
         .spine-area {
             fill-opacity: 0.15;
             fill: url(#spineGradient);
+            transition: fill-opacity 0.3s;
+        }
+
+        .spine-area-hover {
+            fill-opacity: 0.45;
+        }
+
+        .spine-area-mirror {
+            fill-opacity: 0.08;
+            transition: fill-opacity 0.3s;
+        }
+
+        .spine-area-mirror.spine-area-hover {
+            fill-opacity: 0.22;
+        }
+
+        .volume-label {
+            font-size: 11px;
+            fill: #4da6ff;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .volume-label.visible {
+            opacity: 1;
         }
 
         /* Pulse animation for election night */
@@ -935,8 +961,8 @@
                 .y1(d => spineY - countScale(d))
                 .curve(d3.curveMonotoneX);
 
-            // Spine area - lower half mirror too
-            mainGroup.append('path')
+            // Spine area - upper
+            const spineUpper = mainGroup.append('path')
                 .attr('class', 'spine-area')
                 .attr('d', area(counts));
 
@@ -946,10 +972,57 @@
                 .y1(d => spineY + countScale(d) * 0.5)
                 .curve(d3.curveMonotoneX);
 
-            mainGroup.append('path')
-                .attr('class', 'spine-area')
-                .attr('d', areaBelow(counts))
-                .style('fill-opacity', 0.08);
+            // Spine area - lower mirror
+            const spineLower = mainGroup.append('path')
+                .attr('class', 'spine-area spine-area-mirror')
+                .attr('d', areaBelow(counts));
+
+            // Volume label (shows month + count on hover)
+            const volumeLabel = mainGroup.append('text')
+                .attr('class', 'volume-label')
+                .attr('text-anchor', 'middle');
+
+            // Invisible hover zone over the histogram region
+            const hoverZone = mainGroup.append('rect')
+                .attr('x', dateScale(dates[0]))
+                .attr('y', spineY - 70)
+                .attr('width', dateScale(dates[dates.length - 1]) - dateScale(dates[0]))
+                .attr('height', 100)
+                .attr('fill', 'transparent')
+                .style('cursor', 'crosshair');
+
+            hoverZone.on('mouseenter', function() {
+                spineUpper.classed('spine-area-hover', true);
+                spineLower.classed('spine-area-hover', true);
+            });
+
+            hoverZone.on('mouseleave', function() {
+                spineUpper.classed('spine-area-hover', false);
+                spineLower.classed('spine-area-hover', false);
+                volumeLabel.classed('visible', false);
+            });
+
+            hoverZone.on('mousemove', function(event) {
+                // Get mouse X in SVG coordinates
+                const [mx] = d3.pointer(event, mainGroup.node());
+                // Find nearest month
+                let nearestIdx = 0;
+                let nearestDist = Infinity;
+                dates.forEach((dt, i) => {
+                    const dx = Math.abs(dateScale(dt) - mx);
+                    if (dx < nearestDist) { nearestDist = dx; nearestIdx = i; }
+                });
+                const m = months[nearestIdx];
+                const c = counts[nearestIdx];
+                const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const dt = new Date(m + '-01');
+                const label = monthNames[dt.getMonth()] + ' ' + dt.getFullYear() + ': ' + c + ' emails';
+                volumeLabel
+                    .attr('x', dateScale(dates[nearestIdx]))
+                    .attr('y', spineY - countScale(c) - 10)
+                    .text(label)
+                    .classed('visible', true);
+            });
 
             // Draw timeline axis
             mainGroup.append('line')
