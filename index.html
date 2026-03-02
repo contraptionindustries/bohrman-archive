@@ -279,6 +279,71 @@
             opacity: 1;
         }
 
+        /* In-place preview card for press/media */
+        .preview-card {
+            position: fixed;
+            background: rgba(10, 14, 39, 0.97);
+            border: 1px solid rgba(77, 166, 255, 0.4);
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-size: 12px;
+            z-index: 300;
+            max-width: 340px;
+            min-width: 220px;
+            box-shadow: 0 6px 30px rgba(0,0,0,0.7), 0 0 1px rgba(77,166,255,0.3);
+            pointer-events: auto;
+            opacity: 0;
+            transform: scale(0.92) translateY(6px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            display: none;
+        }
+        .preview-card.visible {
+            display: block;
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+        .preview-card .pc-close {
+            position: absolute; top: 6px; right: 10px;
+            color: #555; cursor: pointer; font-size: 16px; line-height: 1;
+        }
+        .preview-card .pc-close:hover { color: #fff; }
+        .preview-card .pc-icon {
+            font-size: 20px; float: left; margin-right: 10px; margin-top: 1px;
+        }
+        .preview-card .pc-title {
+            color: #fff; font-weight: 600; font-size: 14px;
+            margin-bottom: 8px; line-height: 1.35; padding-right: 20px;
+        }
+        .preview-card .pc-source {
+            color: #aaa; font-size: 11px; margin-bottom: 3px;
+        }
+        .preview-card .pc-date {
+            color: #8ab4f8; font-size: 11px; margin-bottom: 6px;
+        }
+        .preview-card .pc-file {
+            color: #666; font-size: 10px; margin-top: 4px;
+            word-break: break-all; font-family: monospace;
+        }
+        .preview-card .pc-category {
+            display: inline-block;
+            padding: 2px 10px; border-radius: 10px;
+            font-size: 10px; margin-top: 8px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .preview-card .pc-link {
+            display: inline-block; margin-top: 8px; margin-left: 6px;
+            color: #4da6ff; font-size: 11px; text-decoration: none;
+        }
+        .preview-card .pc-link:hover { text-decoration: underline; }
+        .preview-card .pc-media-preview {
+            margin-bottom: 10px; border-radius: 4px; overflow: hidden;
+            background: rgba(255,255,255,0.03);
+        }
+        .preview-card .pc-media-preview img,
+        .preview-card .pc-media-preview video {
+            max-width: 100%; display: block; border-radius: 4px;
+        }
+
         /* Context menu */
         .context-menu {
             position: fixed;
@@ -674,6 +739,7 @@
     </div>
 
     <div class="tooltip"></div>
+    <div class="preview-card" id="preview-card"></div>
     <div class="context-menu" id="context-menu"></div>
 
     <script>
@@ -1515,6 +1581,14 @@
                 hideContextMenu();
                 if (traceMode && d.type === 'person') {
                     activateTrace(d);
+                } else if (d.type === 'web' || d.type === 'asset') {
+                    // In-place preview for press/media nodes
+                    if (activePreviewNode === d.id) {
+                        hidePreview();
+                    } else {
+                        hidePreview();
+                        showPreview(event, d);
+                    }
                 } else if (tracedNode && d.type === 'email') {
                     selectNode(d);
                 } else {
@@ -1531,6 +1605,8 @@
 
             // Add hover handlers — highlight connected edges (unless trace is active)
             nodeElements.on('mouseenter', function(event, d) {
+                // Skip tooltip if preview card is showing for this node
+                if (activePreviewNode === d.id) return;
                 if (tracedNode) {
                     // Trace is locked in — only show tooltip for traced email nodes
                     if (d.type === 'email') {
@@ -1850,6 +1926,90 @@
             const tooltip = document.querySelector('.tooltip');
             tooltip.classList.remove('visible');
         }
+
+        // ---- IN-PLACE PREVIEW CARD for press/media nodes ----
+        const previewCard = document.getElementById('preview-card');
+        let activePreviewNode = null;
+
+        function showPreview(event, d) {
+            hideTooltip();
+
+            const typeIcons = { video: '\u{1F3AC}', image: '\u{1F5BC}', document: '\u{1F4C4}' };
+            const icon = d.type === 'web' ? '\u{1F4F0}' : (typeIcons[d.assetType] || '\u{1F4C1}');
+            const catColor = d.color || '#4da6ff';
+            const dateStr = d.date ? new Date(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+            let html = '<span class="pc-close" id="pc-close">\u00D7</span>';
+            html += '<div class="pc-icon">' + icon + '</div>';
+            html += '<div class="pc-title">' + escapeHtml(d.title || 'Untitled') + '</div>';
+
+            if (d.type === 'web' && d.source) {
+                html += '<div class="pc-source">' + escapeHtml(d.source) + '</div>';
+            }
+            html += '<div class="pc-date">' + dateStr + '</div>';
+
+            // Media preview for assets
+            if (d.type === 'asset') {
+                const sanitizedName = d.file.split('/').pop().toLowerCase()
+                    .replace(/\.[^.]*$/, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9_-]/g, '');
+                if (d.assetType === 'image' || /\.(jpg|jpeg|png)$/i.test(d.file)) {
+                    html += '<div class="pc-media-preview"><img src="web_media/thumbnails/' + sanitizedName + '_thumb.jpg" alt="' + escapeHtml(d.title) + '" onerror="this.parentElement.style.display=\'none\'"></div>';
+                } else if (d.assetType === 'video' || /\.(mov|mp4|m4v)$/i.test(d.file)) {
+                    html += '<div class="pc-media-preview"><video controls poster="web_media/video/' + sanitizedName + '_poster.jpg" style="max-width:100%"><source src="web_media/video/' + sanitizedName + '.mp4" type="video/mp4"></video></div>';
+                }
+            }
+
+            if (d.file) html += '<div class="pc-file">' + escapeHtml(d.file) + '</div>';
+            html += '<span class="pc-category" style="background:' + catColor + '22;color:' + catColor + '">' + escapeHtml(d.category || d.assetType || '') + '</span>';
+
+            if (d.type === 'web' && d.url) {
+                html += '<a class="pc-link" href="' + d.url + '" target="_blank">Open article \u2192</a>';
+            }
+
+            previewCard.innerHTML = html;
+            previewCard.style.borderColor = catColor + '66';
+
+            // Position near click, clamped to viewport
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            let left = event.clientX + 16;
+            let top = event.clientY - 20;
+            if (left + 350 > vw) left = event.clientX - 360;
+            if (left < 10) left = 10;
+            if (top + 200 > vh) top = event.clientY - 220;
+            if (top < 10) top = 10;
+
+            previewCard.style.left = left + 'px';
+            previewCard.style.top = top + 'px';
+
+            // Show with a tiny delay so the CSS transition fires
+            previewCard.style.display = 'block';
+            requestAnimationFrame(() => previewCard.classList.add('visible'));
+
+            activePreviewNode = d.id;
+
+            document.getElementById('pc-close').onclick = function(e) {
+                e.stopPropagation();
+                hidePreview();
+            };
+        }
+
+        function hidePreview() {
+            previewCard.classList.remove('visible');
+            setTimeout(() => {
+                if (!previewCard.classList.contains('visible')) {
+                    previewCard.style.display = 'none';
+                }
+            }, 200);
+            activePreviewNode = null;
+        }
+
+        // Dismiss preview when clicking on SVG background
+        d3.select('#canvas').on('click.preview', function() {
+            if (activePreviewNode !== null) hidePreview();
+        });
 
         function activateTrace(personNode) {
             tracedNode = personNode;
