@@ -58,6 +58,62 @@
             font-weight: 500;
         }
 
+        .topbar-sep {
+            width: 1px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.15);
+            flex-shrink: 0;
+            margin: 0 16px;
+        }
+
+        .ticker-wrap {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .ticker-inner {
+            display: inline-block;
+            animation: ticker 45s linear infinite;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            color: rgba(255, 255, 255, 0.45);
+            font-weight: 300;
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .archive-pill {
+            background: rgba(204, 0, 0, 0.15);
+            border: 1px solid rgba(204, 0, 0, 0.4);
+            color: #cc0000;
+            font-size: 9px;
+            font-weight: 500;
+            letter-spacing: 0.15em;
+            padding: 3px 10px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .archive-dot {
+            width: 5px;
+            height: 5px;
+            background: #cc0000;
+            border-radius: 50%;
+            animation: blink 1.2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
         /* Bottom bar */
         .bottom-bar {
             position: fixed;
@@ -701,6 +757,20 @@
 <body>
     <div class="top-bar">
         <h1>DAVID BOHRMAN ARCHIVE <span>|</span> SIGNAL PATHS <span style="font-size:0.5em;opacity:0.5">(POC)</span></h1>
+        <div class="topbar-sep"></div>
+        <div class="ticker-wrap">
+            <span class="ticker-inner">
+                ELECTION NIGHT 2008 · THE HOLOGRAM PROJECT · JESSICA YELLIN · WILL.I.AM · WOLF BLITZER ·
+                VIZRT · SPORTVU · SHOTOKU · THOMA · MAGIC WALL · DEBATE FOCUS SCORING ·
+                OBAMA WINS · GRANT PARK · 35 CAMERAS · 220° ARC · 3 SECOND LATENCY ·
+                THE MODEL U.N. · CHICAGO TO NEW YORK · LIVE TELEVISION FIRST ·&nbsp;&nbsp;&nbsp;
+                ELECTION NIGHT 2008 · THE HOLOGRAM PROJECT · DAVID BOHRMAN COLLECTION
+            </span>
+        </div>
+        <div class="archive-pill">
+            <div class="archive-dot"></div>
+            ARCHIVE
+        </div>
     </div>
 
     <svg id="canvas"></svg>
@@ -719,9 +789,10 @@
             <button class="event-toggle" data-cat="culture">Culture</button>
         </div>
         <div class="density-sliders">
-            <label class="slider-label">Emails <input type="range" min="0" max="100" value="100" id="density-emails" class="density-slider" title="Spread email nodes apart"><span id="density-emails-val">100%</span></label>
-            <label class="slider-label">Press <input type="range" min="0" max="100" value="100" id="density-press" class="density-slider" title="Spread press nodes apart"><span id="density-press-val">100%</span></label>
-            <label class="slider-label">Media <input type="range" min="0" max="100" value="100" id="density-media" class="density-slider" title="Spread media nodes apart"><span id="density-media-val">100%</span></label>
+            <label class="slider-label">Emails <input type="range" min="0" max="300" value="100" id="density-emails" class="density-slider" title="Spread email nodes apart"><span id="density-emails-val">100%</span></label>
+            <label class="slider-label">Press <input type="range" min="0" max="200" value="100" id="density-press" class="density-slider" title="Spread press nodes apart"><span id="density-press-val">100%</span></label>
+            <label class="slider-label">Media <input type="range" min="0" max="200" value="100" id="density-media" class="density-slider" title="Spread media nodes apart"><span id="density-media-val">100%</span></label>
+            <label class="slider-label">Height <input type="range" min="50" max="300" value="100" id="height-slider" class="density-slider" title="Raise or lower people and email nodes"><span id="height-slider-val">100%</span></label>
         </div>
         <div class="bottom-stats">
             <span>Zoom: <span id="stat-zoom">1.00</span>x</span>
@@ -1034,9 +1105,9 @@
                     assetType: asset.type,
                     category: asset.category,
                     x: x,
-                    y: spineY + 110 + (Math.random() - 0.5) * 30,
+                    y: spineY + 50 + (Math.random() - 0.5) * 30,
                     targetX: x,
-                    targetY: spineY + 110,
+                    targetY: spineY + 50,
                     vx: 0,
                     vy: 0,
                     radius: 7,
@@ -1422,14 +1493,17 @@
                     .attr('stroke-dasharray', '3,3')
                     .attr('opacity', evt.major ? 0.7 : 0.4);
 
-                g.append('circle')
+                const pr = evt.major ? 6 : 4;
+                const px = ex - 0.5;
+                const pennantPath = `M${px},${endY - pr} L${px + pr * 2},${endY} L${px},${endY + pr}Z`;
+                g.append('path')
                     .attr('class', 'event-marker-dot')
-                    .attr('cx', ex).attr('cy', endY)
-                    .attr('r', evt.major ? 6 : 4)
+                    .attr('d', pennantPath)
                     .attr('fill', color)
                     .attr('opacity', evt.major ? 0.85 : 0.55)
                     .on('mouseenter', function(event) {
-                        d3.select(this).attr('r', evt.major ? 10 : 7).attr('opacity', 1);
+                        const hr = evt.major ? 10 : 7;
+                        d3.select(this).attr('d', `M${px},${endY - hr} L${px + hr * 2},${endY} L${px},${endY + hr}Z`).attr('opacity', 1);
                         const tipEl = document.querySelector('.tooltip');
                         const dateStr = new Date(evt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                         tipEl.innerHTML = '<span style="color:' + color + ';font-weight:600">' + evt.label + '</span>' +
@@ -1440,7 +1514,7 @@
                         tipEl.style.top = (event.clientY - 50) + 'px';
                     })
                     .on('mouseleave', function() {
-                        d3.select(this).attr('r', evt.major ? 6 : 4).attr('opacity', evt.major ? 0.85 : 0.55);
+                        d3.select(this).attr('d', pennantPath).attr('opacity', evt.major ? 0.85 : 0.55);
                         document.querySelector('.tooltip').classList.remove('visible');
                     });
             });
@@ -1526,29 +1600,15 @@
                 .attr('stroke', 'rgba(255, 255, 255, 0.3)')
                 .attr('stroke-width', 1.5);
 
-            // Web source nodes - diamonds
-            nodeElements.filter(d => d.type === 'web')
-                .append('path')
-                .attr('d', d => {
-                    const r = d.radius;
-                    return `M 0,-${r} L ${r},0 L 0,${r} L -${r},0 Z`;
-                })
-                .attr('fill', d => d.color)
-                .attr('opacity', 0.8)
-                .attr('stroke', 'rgba(255, 255, 255, 0.2)')
-                .attr('stroke-width', 1);
-
-            // Asset nodes - squares
-            nodeElements.filter(d => d.type === 'asset')
+            // Web and asset nodes — invisible hit area for click/hover interaction
+            nodeElements.filter(d => d.type === 'web' || d.type === 'asset')
                 .append('rect')
-                .attr('x', d => -d.radius)
-                .attr('y', d => -d.radius)
-                .attr('width', d => d.radius * 2)
-                .attr('height', d => d.radius * 2)
-                .attr('fill', d => d.color)
-                .attr('opacity', 0.8)
-                .attr('stroke', 'rgba(255, 255, 255, 0.2)')
-                .attr('stroke-width', 1);
+                .attr('x', -4)
+                .attr('y', -8)
+                .attr('width', 140)
+                .attr('height', 16)
+                .attr('fill', 'transparent')
+                .style('cursor', 'pointer');
 
             // Add labels to people nodes
             nodeElements.filter(d => d.type === 'person')
@@ -1559,21 +1619,40 @@
                 .text(d => d.name)
                 .style('pointer-events', 'none');
 
-            // Asset and web source labels — visible now that waterfall prevents overlap
-            nodeElements.filter(d => d.type === 'asset' || d.type === 'web')
-                .append('text')
+            // Asset and web source labels — colored bullet icons, no large shapes
+            const belowLabels = nodeElements.filter(d => d.type === 'asset' || d.type === 'web');
+
+            // Colored bullet icon (▶ ◻ ▫ for assets, ◆ for press)
+            belowLabels.append('text')
                 .attr('class', 'node-label')
-                .attr('y', d => d.radius + 10)
-                .attr('text-anchor', 'middle')
+                .attr('x', 0)
+                .attr('y', 4)
+                .attr('text-anchor', 'end')
+                .style('font-size', '8px')
+                .style('fill', d => d.color)
+                .style('opacity', 0.9)
+                .text(d => {
+                    if (d.type === 'asset') {
+                        return d.assetType === 'video' ? '▶' : d.assetType === 'image' ? '◻' : '▫';
+                    }
+                    return '◆';
+                })
+                .style('pointer-events', 'none');
+
+            // Label text to the right of bullet
+            belowLabels.append('text')
+                .attr('class', 'node-label')
+                .attr('x', 4)
+                .attr('y', 4)
+                .attr('text-anchor', 'start')
                 .style('font-size', '8px')
                 .style('fill', d => d.type === 'asset' ? '#ccc' : '#aaa')
                 .style('opacity', 0.8)
                 .text(d => {
                     if (d.type === 'asset') {
-                        const icon = d.assetType === 'video' ? '▶' : d.assetType === 'image' ? '◻' : '▫';
-                        return icon + ' ' + (d.title.length > 20 ? d.title.substring(0, 18) + '…' : d.title);
+                        return d.title.length > 22 ? d.title.substring(0, 20) + '…' : d.title;
                     }
-                    return d.source.length > 20 ? d.source.substring(0, 18) + '…' : d.source;
+                    return d.source.length > 22 ? d.source.substring(0, 20) + '…' : d.source;
                 })
                 .style('pointer-events', 'none');
 
@@ -2297,9 +2376,12 @@
             // Stop bottom bar clicks from propagating to canvas
             document.querySelector('.bottom-bar').addEventListener('click', (e) => { e.stopPropagation(); });
 
-            // Density sliders — adjust collision radius to spread nodes apart
-            // Track extra padding per type: 100% = tight (0 extra), 0% = max spread (40 extra px)
+            // Density sliders — adjust collision radius and charge to spread/pack nodes
+            // 0% = max spread (big padding), 100% = default, 200% = packed tight (reduced repulsion)
+            // Emails only: 200-250% fades opacity to 0, 250-300% stays invisible
             const densityPadding = { email: 0, web: 0, asset: 0 };
+            const densityChargeMult = { email: 1, web: 1, asset: 1 };
+            let emailOpacityMult = 1; // 1 = full, 0 = invisible
 
             ['emails', 'press', 'media'].forEach(sliderType => {
                 const slider = document.getElementById('density-' + sliderType);
@@ -2313,18 +2395,86 @@
                     // Map slider type to node type
                     const nodeType = sliderType === 'emails' ? 'email' : sliderType === 'press' ? 'web' : 'asset';
 
-                    // 100% = 0 extra padding (tight), 0% = 40px extra (max spread)
-                    densityPadding[nodeType] = (100 - pct) * 0.4;
+                    if (pct <= 100) {
+                        // 0-100%: padding increases as slider decreases (spreading apart)
+                        densityPadding[nodeType] = (100 - pct) * 0.4;
+                        densityChargeMult[nodeType] = 1;
+                    } else {
+                        // 100-200%: no padding, and reduce charge repulsion to let nodes pack tighter
+                        densityPadding[nodeType] = 0;
+                        // At 200%, charge drops to 10% of normal — nodes almost overlap
+                        densityChargeMult[nodeType] = Math.max(0.1, 1 - (Math.min(pct, 200) - 100) / 110);
+                    }
 
-                    // Reconfigure collision force with new per-type padding
+                    // Email-only: fade opacity from 200-250%, stay invisible 250-300%
+                    if (sliderType === 'emails') {
+                        if (pct <= 200) {
+                            emailOpacityMult = 1;
+                        } else if (pct <= 250) {
+                            emailOpacityMult = 1 - (pct - 200) / 50; // linear fade to 0
+                        } else {
+                            emailOpacityMult = 0;
+                        }
+
+                        // Apply opacity to email nodes and their labels only — lines stay visible
+                        window.nodeElements.filter(d => d.type === 'email')
+                            .style('opacity', emailOpacityMult);
+                    }
+
+                    // Reconfigure collision force with per-type padding
                     simulation.force('collide', d3.forceCollide(d => {
                         const baseExtra = (d.type === 'web' || d.type === 'asset') ? 8 : 0;
-                        return d.radius + CONFIG.simulation.forceCollide + baseExtra + (densityPadding[d.type] || 0);
+                        const pad = densityPadding[d.type] || 0;
+                        const chargeMult = densityChargeMult[d.type] || 1;
+                        // Above 100%, also shrink the collision radius itself
+                        const collideBase = (d.radius + CONFIG.simulation.forceCollide + baseExtra) * chargeMult;
+                        return collideBase + pad;
                     }));
 
-                    // Reheat simulation so nodes drift apart
+                    // Reconfigure charge force with per-type multiplier
+                    simulation.force('charge', d3.forceManyBody().strength(d => {
+                        const mult = densityChargeMult[d.type] || 1;
+                        if (d.type === 'person') {
+                            const conns = window.personLinkCount[d.id] || 0;
+                            return (-10 - conns * 2) * mult;
+                        }
+                        return CONFIG.simulation.forceStrength * mult;
+                    }));
+
+                    // Reheat simulation so nodes reposition
                     simulation.alpha(0.3).restart();
                 });
+            });
+
+            // Height slider — raise/lower people and email nodes
+            const heightSlider = document.getElementById('height-slider');
+            const heightValSpan = document.getElementById('height-slider-val');
+            heightSlider.addEventListener('input', function(e) {
+                e.stopPropagation();
+                const pct = parseInt(this.value);
+                heightValSpan.textContent = pct + '%';
+                const mult = pct / 100;
+                const spineY = window.spineY;
+
+                // Recalculate targetY for all people and email nodes
+                const maxPersonCount = Math.max(...VIZDATA.people.map(p => p.count));
+                nodes.forEach(d => {
+                    if (d.type === 'email') {
+                        d.targetY = spineY - 120 * mult;
+                    } else if (d.type === 'person') {
+                        const weight = Math.sqrt(d.count / maxPersonCount);
+                        d.targetY = spineY - (220 + (1 - weight) * 160) * mult;
+                    }
+                });
+
+                // Update the Y force to use new targets
+                simulation.force('y', d3.forceY(d => d.targetY !== null ? d.targetY : height * 0.2).strength(d => {
+                    if (d.type === 'person') return 0.06;
+                    if (d.type === 'email') return 0.06;
+                    return 0.2;
+                }));
+
+                simulation.alpha(0.3).restart();
             });
 
             // Event timeline category toggles
